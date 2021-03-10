@@ -1,5 +1,8 @@
 package cz.muni.fi.pa165.currency;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.math.BigDecimal;
 import java.util.Currency;
 
@@ -12,7 +15,7 @@ import java.util.Currency;
 public class CurrencyConvertorImpl implements CurrencyConvertor {
 
     private final ExchangeRateTable exchangeRateTable;
-    //private final Logger logger = LoggerFactory.getLogger(CurrencyConvertorImpl.class);
+    private final Logger logger = LoggerFactory.getLogger(CurrencyConvertorImpl.class);
 
     public CurrencyConvertorImpl(ExchangeRateTable exchangeRateTable) {
         this.exchangeRateTable = exchangeRateTable;
@@ -20,6 +23,7 @@ public class CurrencyConvertorImpl implements CurrencyConvertor {
 
     @Override
     public BigDecimal convert(Currency sourceCurrency, Currency targetCurrency, BigDecimal sourceAmount){
+        logger.trace("CurrencyConvertorImpl.convert() was called");
 
         // Verify parameters (sourceCurrency and targetCurrency verified by exchangeRateTable)
         verifyParams(sourceAmount);
@@ -29,12 +33,14 @@ public class CurrencyConvertorImpl implements CurrencyConvertor {
         try{
             rate = exchangeRateTable.getExchangeRate(sourceCurrency, targetCurrency);
         }catch (ExternalServiceFailureException e){
+            logger.error("Conversion failure between currencies {} and {}", sourceCurrency, targetCurrency);
             throw new UnknownExchangeRateException(e.getMessage(), e);
         }
 
         if(rate == null){
-            throw new UnknownExchangeRateException("Unknown exchange rate for currencies "
-                    + sourceCurrency.getCurrencyCode() + " and " + targetCurrency.getCurrencyCode());
+            String message = String.format("Unknown exchange rate for currencies %s and %s", sourceCurrency.getCurrencyCode(), targetCurrency.getCurrencyCode());
+            logger.warn(message);
+            throw new UnknownExchangeRateException(message);
         }
 
         return rate.multiply(sourceAmount);
